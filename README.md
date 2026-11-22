@@ -6,6 +6,25 @@ SkillProof 3D is an interactive, 3D digital portfolio and evidence workspace for
 
 The application is built with React, TypeScript, Three.js / React Three Fiber, Vite, Tailwind CSS, and Framer Motion. It is currently a **client-side prototype**: profile data is stored in the browser, and authentication is local to that browser. It does not currently use a hosted backend or cloud account database.
 
+## Project Overview
+
+SkillProof 3D helps students, developers, and early-career professionals present skills through evidence instead of relying only on résumé claims. It brings skills, projects, certificates, achievements, and supporting links into an interactive 3D portfolio with an import-and-review workflow.
+
+**Live website:** https://uttaravallirohith.github.io/skillproof-3d/
+
+**Repository:** https://github.com/UTTARAVALLIROHITH/skillproof-3d
+
+**Current implementation status:** Front-end prototype. Profile data and local accounts are stored in the browser; there is no hosted backend, cloud sync, or production authentication yet.
+
+## At a Glance
+
+- **Skill Universe** — Explore skills and their supporting evidence in a visual 3D layout.
+- **Project Galaxy** — Present projects with descriptions, technologies, contributions, screenshots, repository links, and demos.
+- **Certificate Vault** — Organise certificates, credentials, and related skills.
+- **Evidence Engine** — Connect each skill to practical proof such as projects, repositories, certificates, and demonstrations.
+- **Skill Passport** — Share a structured public-facing profile and export a standalone HTML version.
+- **Import Center** — Bring in résumé, public GitHub, LinkedIn archive, certificate, and website information, then review proposed changes before applying them.
+
 ## Contents
 
 - [What you can do](#what-you-can-do)
