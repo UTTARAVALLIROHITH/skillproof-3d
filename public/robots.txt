@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://uttaravallirohith.github.io/skillproof-3d/sitemap.xml
