@@ -85,6 +85,32 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      # While the Pages source is "Deploy from a branch", GitHub publishes the repo
+      # root in parallel with this job and whichever publish lands last is what the
+      # world sees. Let that build finish first so this artifact deploy is last.
+      - name: Wait for any competing branch build
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          for _ in $(seq 1 24); do
+            build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null || echo unknown)"
+            if [ "${build_type}" = "workflow" ]; then
+              echo "Pages publishes from GitHub Actions; no competing branch build."
+              exit 0
+            fi
+            pending="$(gh api "repos/${GITHUB_REPOSITORY}/pages/builds" \
+              --jq '[.[] | select(.status != "built" and .status != "errored")] | length' 2>/dev/null || echo 0)"
+            if [ "${pending:-0}" = "0" ]; then
+              echo "No branch build in flight; deploying now."
+              exit 0
+            fi
+            echo "Branch build still running (${pending}); waiting 10s…"
+            sleep 10
+          done
+          echo "::warning::Gave up waiting for the branch build; deploying anyway."
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
