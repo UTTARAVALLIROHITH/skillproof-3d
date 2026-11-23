@@ -1,0 +1,78 @@
+name: Re-publish SkillProof Pages build
+
+# Safety net for repository settings.
+#
+# While Settings > Pages > Build and deployment > Source is still
+# "Deploy from a branch", GitHub runs its own "pages build and deployment"
+# workflow on every push to main. That legacy build publishes the raw repository
+# root, where index.html is the Vite dev shell (`<script src="/src/main.tsx">`).
+# Served from https://<user>.github.io/<repo>/ that script 404s, so the live page
+# is blank. The legacy build also finishes *after* the normal deploy workflow, so
+# it overwrites the correct dist/ artifact.
+#
+# This workflow waits for that legacy build to finish and then republishes the
+# real production build, so the correct content is always the last thing
+# deployed. Once the Pages source is set to "GitHub Actions", the legacy build no
+# longer runs and this workflow simply stays idle.
+
+on:
+  workflow_run:
+    workflows: ["pages build and deployment"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  republish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout the published commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          test -f dist/index.html || { echo "::error::dist/index.html is missing"; exit 1; }
+          if grep -q 'src="/src/main.tsx"' dist/index.html; then
+            echo "::error::dist/index.html is the unbuilt dev page (references /src/main.tsx)"
+            exit 1
+          fi
+          touch dist/.nojekyll
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
