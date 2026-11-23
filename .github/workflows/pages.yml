@@ -19,21 +19,58 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
+
+      # The repository setting must publish from "GitHub Actions". If it is still
+      # "Deploy from a branch", GitHub also publishes the raw repo root, where the
+      # dev index.html points at /src/main.tsx (a 404 once hosted) — that legacy
+      # build can land after this one and wipe out the real site. Switch the source
+      # automatically so the two deployers never fight over the live URL.
+      - name: Ensure Pages publishes from GitHub Actions
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type || echo unknown)"
+          echo "Current Pages build_type: ${current}"
+          if [ "${current}" != "workflow" ]; then
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
+            echo "::notice::Pages source switched to GitHub Actions."
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Type check
+        run: npx tsc --noEmit
+
       - name: Build application
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          test -f dist/index.html || { echo "::error::dist/index.html is missing"; exit 1; }
+          # A production page must not reference raw TypeScript sources.
+          if grep -q 'src="/src/main.tsx"' dist/index.html; then
+            echo "::error::dist/index.html is the unbuilt dev page (references /src/main.tsx)"
+            exit 1
+          fi
+          # Hash routing needs no SPA rewrite; GitHub Pages must not run Jekyll.
+          touch dist/.nojekyll
+
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist
 
@@ -46,4 +83,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
