@@ -94,12 +94,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -u
-          for _ in $(seq 1 24); do
-            build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null || echo unknown)"
-            if [ "${build_type}" = "workflow" ]; then
-              echo "Pages publishes from GitHub Actions; no competing branch build."
-              exit 0
-            fi
+          build_type="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null || echo unknown)"
+          echo "Pages build_type: ${build_type}"
+          if [ "${build_type}" = "workflow" ]; then
+            echo "Pages publishes from GitHub Actions; no competing branch build."
+            exit 0
+          fi
+
+          # The branch build starts with the same push and takes roughly 40-60s.
+          # Give it a head start, then wait until nothing is in flight.
+          echo "Letting GitHub's branch build publish first…"
+          sleep 45
+          for _ in $(seq 1 18); do
             pending="$(gh api "repos/${GITHUB_REPOSITORY}/pages/builds" \
               --jq '[.[] | select(.status != "built" and .status != "errored")] | length' 2>/dev/null || echo 0)"
             if [ "${pending:-0}" = "0" ]; then

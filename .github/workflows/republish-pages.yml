@@ -10,10 +10,12 @@ name: Re-publish SkillProof Pages build
 # is blank. The legacy build also finishes *after* the normal deploy workflow, so
 # it overwrites the correct dist/ artifact.
 #
-# This workflow waits for that legacy build to finish and then republishes the
-# real production build, so the correct content is always the last thing
-# deployed. Once the Pages source is set to "GitHub Actions", the legacy build no
-# longer runs and this workflow simply stays idle.
+# This workflow is the manual recovery button: run it from the Actions tab to
+# republish the real production build on demand. It also listens for the legacy
+# build's completion, although GitHub does not always emit that event for its
+# dynamically generated "pages build and deployment" workflow — in that case the
+# ordering guard in pages.yml keeps the artifact deploy last instead. Once the
+# Pages source is set to "GitHub Actions" this workflow is no longer needed.
 
 on:
   workflow_run:
