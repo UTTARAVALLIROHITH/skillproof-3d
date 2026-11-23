@@ -164,15 +164,30 @@ The Vite configuration uses `vite-plugin-singlefile`; the production output is i
 
 ## Deploy to GitHub Pages
 
-A GitHub Actions workflow is included at `.github/workflows/pages.yml`. It installs dependencies, type-checks, builds the app, uploads the `dist` artifact, and deploys it to GitHub Pages when code is pushed to `main`.
+A GitHub Actions workflow is included at `.github/workflows/pages.yml`. It installs dependencies, type-checks, builds the app, verifies the output, uploads the `dist` artifact, and deploys it to GitHub Pages when code is pushed to `main`.
 
 1. Push the project to the repository's `main` branch.
 2. Open repository **Settings → Pages**.
-3. Set the build/deployment source to **GitHub Actions**.
+3. Set **Build and deployment → Source** to **GitHub Actions** (not “Deploy from a branch”).
 4. Open the **Actions** tab and monitor the Pages deployment workflow.
 5. After a successful deployment, open https://uttaravallirohith.github.io/skillproof-3d/.
 
 The app uses hash-based navigation (for example, `#/projects` and `#/passport`), so it does not require server-side route rewrites.
+
+### Blank page on the live site
+
+If the live URL loads an empty page, the Pages source is probably still set to **Deploy from a branch**. In that mode GitHub publishes the repository root, where `index.html` is the Vite dev shell:
+
+```html
+<script type="module" src="/src/main.tsx"></script>
+```
+
+Once hosted that request points at `https://uttaravallirohith.github.io/src/main.tsx` and 404s, so the browser shows a blank page. Two safeguards are in place:
+
+- `.github/workflows/pages.yml` switches the Pages source to **GitHub Actions** when the token allows it, and otherwise warns in the workflow annotations.
+- `.github/workflows/republish-pages.yml` re-deploys the production build whenever GitHub's legacy `pages build and deployment` workflow runs, so the correct build is always the last deployment.
+
+Setting **Source** to **GitHub Actions** is still the intended configuration; the safeguards only keep the site working until it is changed. The build itself uses a relative `base`, so it works both at a domain root and under the `/skillproof-3d/` sub-path.
 
 ## App Screens
 

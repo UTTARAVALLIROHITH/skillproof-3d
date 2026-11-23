@@ -37,12 +37,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          current="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type || echo unknown)"
+          current="$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null || echo unknown)"
           echo "Current Pages build_type: ${current}"
-          if [ "${current}" != "workflow" ]; then
-            gh api -X PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow
+          if [ "${current}" = "workflow" ]; then
+            echo "Pages already publishes from GitHub Actions."
+            exit 0
+          fi
+          if gh api -X PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow 2>/dev/null; then
             echo "::notice::Pages source switched to GitHub Actions."
+          else
+            echo "::warning::Pages is still set to 'Deploy from a branch'. Set Settings > Pages > Build and deployment > Source to 'GitHub Actions' so the legacy branch build stops overwriting this deploy."
           fi
 
       - name: Configure Pages
